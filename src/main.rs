@@ -8,7 +8,7 @@ fn main() {
     let mut t = tries::Node::new(None);
     const FILES_TO_READ: i32 = 50000;
 
-    let f = match File::open("./data.csv") {
+    let f = match File::open("./wikipedia-latest-titles-short.csv") {
         Ok(file) => file,
         Err(e) => panic!(e),
     };
