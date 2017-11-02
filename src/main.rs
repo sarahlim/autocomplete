@@ -5,8 +5,8 @@ use std::fs::File;
 mod tries;
 
 fn main() {
-    let mut t = tries::Node::new(None);
-    const FILES_TO_READ: i32 = 50000;
+    let mut t = tries::Node::new();
+    const FILES_TO_READ: i32 = 500000;
 
     let f = match File::open("./wikipedia-latest-titles-short.csv") {
         Ok(file) => file,

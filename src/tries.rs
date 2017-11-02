@@ -4,7 +4,6 @@ use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub struct Node {
-    value: Option<char>,
     is_word: bool,
     children: BTreeMap<char, Node>,
 }
@@ -14,9 +13,8 @@ fn moving<T>(t: T) -> T {
 }
 
 impl Node {
-    pub fn new(value: Option<char>) -> Node {
+    pub fn new() -> Node {
         Node {
-            value: value,
             is_word: false,
             children: BTreeMap::new(),
         }
@@ -26,10 +24,7 @@ impl Node {
     pub fn insert(&mut self, word: &str) {
         let mut node = self;
         for c in word.chars() {
-            node = moving(node)
-                .children
-                .entry(c)
-                .or_insert(Node::new(Some(c)));
+            node = moving(node).children.entry(c).or_insert(Node::new());
         }
         node.is_word = true;
     }
@@ -64,17 +59,13 @@ impl Node {
             if result.len() >= n {
                 return result;
             }
-            let mut current_word = prefix.to_owned();
-            if let Some(current_char) = node.value {
-                current_word.push(current_char);
-            }
             if node.is_word {
-                result.push(current_word.clone());
+                result.push(prefix.clone());
             }
             stack.extend(node.children
-                             .values()
+                             .iter()
                              .rev()
-                             .map(|child| (child, current_word.clone())));
+                             .map(|(edge, child)| (child, format!("{}{}", prefix, edge))));
         }
         result
     }
@@ -85,11 +76,7 @@ impl Node {
         if let Some(node) = self.find_node(query) {
             node.take_next(n)
                 .iter()
-                // HACK: Since take_next() appends each node's value
-                // to the suffix, we accidentally double-count the
-                // value of the node from which we begin searching.
-                // Currently we just slice the suffix.
-                .map(|suffix| format!("{}{}", query, &suffix[1..]))
+                .map(|suffix| format!("{}{}", query, &suffix))
                 .collect::<Vec<String>>()
         } else {
             vec![]
@@ -104,7 +91,7 @@ mod tests {
     #[test]
     fn insert() {
         // Basic insertion and lookup
-        let mut t = Node::new(None);
+        let mut t = Node::new();
         let words = vec!["aa", "ab", "abc", "Ab"];
         for w in words.iter() {
             t.insert(w);
@@ -119,7 +106,7 @@ mod tests {
     #[test]
     fn insert_one_letter() {
         // Inserting one-letter words works, without false positives.
-        let mut t = Node::new(None);
+        let mut t = Node::new();
         let words = vec!["aa", "ab", "c", "d"];
         for w in words.iter() {
             t.insert(w);
@@ -132,7 +119,7 @@ mod tests {
     #[test]
     fn insert_duplicate() {
         // Inserting duplicate words should only store one word.
-        let mut t = Node::new(None);
+        let mut t = Node::new();
         let words = vec!["aa", "aa"];
         for w in words.iter() {
             t.insert(w);
@@ -144,7 +131,7 @@ mod tests {
     #[test]
     fn autocomplete() {
         // Autocompletion works in lexicographic order.
-        let mut t = Node::new(None);
+        let mut t = Node::new();
         let words = vec!["abra", "aaron", "acapella", "z", "zzz", "zany"];
         for w in words.iter() {
             t.insert(w);
