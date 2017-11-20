@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
 use std::collections::BTreeMap;
+use std::io::{BufReader, BufRead};
+use std::fs::File;
 
 #[derive(Debug)]
 pub struct Node {
@@ -20,6 +22,27 @@ impl Node {
         }
     }
 
+    pub fn from_file(path: &str, max_lines: usize) -> Node {
+        let mut t = Node::new();
+        let f = match File::open(path) {
+            Ok(file) => file,
+            Err(e) => panic!(e),
+        };
+        let file = BufReader::new(&f);
+
+        for (i, line) in file.lines().enumerate() {
+            if i > max_lines {
+                break;
+            }
+            t.insert(&line.unwrap());
+        }
+        t
+    }
+
+    pub fn is_word(&self) -> bool {
+        self.is_word
+    }
+
     /// Insert a word into the trie.
     pub fn insert(&mut self, word: &str) {
         let mut node = self;
@@ -30,7 +53,7 @@ impl Node {
     }
 
     /// Check whether the trie contains a word.
-    pub fn has(&self, word: &str) -> bool {
+    pub fn has_word(&self, word: &str) -> bool {
         match self.find_node(&word) {
             Some(node) => node.is_word,
             None => false,
@@ -38,7 +61,7 @@ impl Node {
     }
 
     /// Find the node corresponding to a given prefix.
-    fn find_node(&self, prefix: &str) -> Option<&Node> {
+    pub fn find_node(&self, prefix: &str) -> Option<&Node> {
         let mut node = self;
         for c in prefix.chars() {
             node = match node.children.get(&c) {
@@ -97,9 +120,9 @@ mod tests {
             t.insert(w);
         }
         for w in words.iter() {
-            assert!(t.has(w));
-            assert!(!t.has(&format!("{}{}", w, "x")));
-            assert!(!t.has(&w[..1]));
+            assert!(t.has_word(w));
+            assert!(!t.has_word(&format!("{}{}", w, "x")));
+            assert!(!t.has_word(&w[..1]));
         }
     }
 
@@ -111,9 +134,9 @@ mod tests {
         for w in words.iter() {
             t.insert(w);
         }
-        assert!(t.has("c"));
-        assert!(t.has("d"));
-        assert!(!t.has("a"));
+        assert!(t.has_word("c"));
+        assert!(t.has_word("d"));
+        assert!(!t.has_word("a"));
     }
 
     #[test]
@@ -124,7 +147,7 @@ mod tests {
         for w in words.iter() {
             t.insert(w);
         }
-        assert!(t.has("aa"));
+        assert!(t.has_word("aa"));
         assert_eq!(t.autocomplete("a", words.len() + 1), vec!["aa"]);
     }
 
@@ -140,5 +163,15 @@ mod tests {
                    vec!["aaron", "abra", "acapella"]);
         assert_eq!(t.autocomplete("a", 1), vec!["aaron"]);
         assert_eq!(t.autocomplete("z", 2), vec!["z", "zany"]);
+    }
+
+    #[test]
+    fn init_from_file() {
+        // Can initialize a trie from a file of words.
+        let t = Node::from_file("./wikipedia-latest-titles-short.csv", 10);
+        assert!(t.has_word("Synontology"));
+        assert!(t.has_word("Prince Regent gudgeon"));
+        assert!(t.has_word("Reported Military Losses during the Invasion of Cyprus (1974)"));
+        assert!(!t.has_word("RU-38"));
     }
 }
